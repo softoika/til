@@ -234,3 +234,60 @@ module SessionsHelper
   end
 end
 ```
+
+#### 8.2.3 レイアウトリンクを変更する  
+ログインしているときとしていないときで異なるメニューを表示したい  
+ヘルパーにlogged_in?というメソッドを用意してログイン状態かどうか返せるようにする  
+app/helpers/session_helper.rb  
+```rb
+module SessionsHelper
+  ...
+  def logged_in?
+    !current_user.nil?
+  end
+end
+```
+viewでは大まかに以下のようにしてリンクを切り替える  
+```erb
+<% if logged_in? %>
+  # ログインユーザー用のリンク
+<% else %>
+  # ログインしていないユーザー用のリンク
+<% end %>
+```
+ログイン状態ではユーザーページに飛べるようにしたい  
+現在ログインしてるユーザのユーザーページへのリンクは次のように書く  
+```erb
+<%= link_to "Profile", current_user %>
+```
+この書き方は次の書き方の省略形となっている  
+```erb
+<%= link_to "Profile", user_path(current_user) %>
+```
+ログアウトもメニューからできるようにしたい  
+```erb
+<%= link_to "Log out", logout_path, method: :delete %>
+```
+最後のハッシュではHTTPリクエストでDELETEリクエストを送るように指示している  
+ドロップダウンメニューの実現にはbootstrapの機能を使っている  
+```erb
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+    Account <b class="caret"></b>
+  </a>
+  <ul class="dropdown-menu">
+    <li><%= link_to "Profile", current_user %></li>
+    <li><%= link_to "Settings", '#' %></li>
+    <li class="divider"></li>
+    <li>
+      <%= link_to "Log out", logout_path, method: :delete %>
+    </li>
+  </ul>
+</li>
+```
+ドロップダウン機能を使うにはjavascriptでjQueryとBootstrapを有効にすること  
+app/assets/javascripts/application.js  
+```js
+//= require jquery
+//= require bootstrap
+```

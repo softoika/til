@@ -291,3 +291,73 @@ app/assets/javascripts/application.js
 //= require jquery
 //= require bootstrap
 ```
+
+#### 8.2.4 レイアウトの変更をテストする
+テスト用のユーザーデータを作っておく必要がある  
+Railsではテスト用データをfixtureで作成できる  
+fixtureはデータモデルを元に作成される。Userモデルのパスワードは暗号化されたpassword_digest属性で扱われているので、独自定義のメソッドでパスワードを生成する必要がある  
+パスワードの生成にはbcryptで生成する  
+```rb
+BCrypt::Password.create(string, cost: cost)
+```
+stringはハッシュ化する文字列で、costはハッシュを計算するためのコスト  
+app/models/user.rb  
+```rb
+class User < ApplicationRecord
+  ...
+  # 渡された文字列のハッシュ値を返す
+  def User.digest(string)
+    cost = ActiveModel::SecurePassword.min_cost ? BCrypt::Engine::MIN_COST :
+                                                  BCrypt::Engine.cost
+    BCrypt::Password.create(string, cost: cost)
+  end
+end
+```
+digetstメソッドはクラスメソッド  
+これでfixtureファイルにerbを通してパスワードを生成することができるようになった  
+test/fixtures/users.yml  
+```yml
+michael:
+  name: Michael Example
+  email: michael@example.com
+  password_digest: <%= User.digest('password') %>
+```
+fixtureからユーザーの生成は  
+```rb
+user = users(:michael)
+```
+ここでテストしたいのは、  
+1. ログイン用のパスを開く
+2. セッション用パスに有効な情報をpostする
+3. ログイン用リンクが表示されなくなったことを確認する
+4. ログアウト用リンクが表示されていることを確認する
+5. プロフィール用リンクが表示されていることを確認する
+
+test/integration//users_login_test.rb  
+```rb
+class UsersLoginTest < ActionDispatch::IntegrationTest
+
+  def setup
+    @user = users(:michael)
+  end
+  ...
+
+  test "login with valid information" do
+    get login_path
+    post login_path, params: { session: { email:    @user.email,
+                                          password: 'password' } }
+    assert_redirected_to @user
+    follow_redirect!
+    assert_template 'users/show'
+    assert_select "a[href=?]", login_path, count: 0
+    assert_select "a[href=?]", logout_path
+    assert_select "a[href=?]", user_path(@user)
+  end
+end
+```
+fixtureで暗号化されたパスワードの生成はできたが、テスト時には平文のパスワードも必要  
+一般的には平文のパスワードは何らかの方法で共有はせずに'password'というパスワードを決め打ちで使う  
+assert_redirected_toでリダイレクト先を確認して、follow_redirect!で実際にページを移動する  
+その後ログインリンクが消えてるのを確認し、  
+ログアウトリンクができているのを確認し、  
+ログインユーザーのユーザーページへのリンクがあるのを確認する  

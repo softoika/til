@@ -361,3 +361,34 @@ assert_redirected_toでリダイレクト先を確認して、follow_redirect!�
 その後ログインリンクが消えてるのを確認し、  
 ログアウトリンクができているのを確認し、  
 ログインユーザーのユーザーページへのリンクがあるのを確認する  
+
+#### 8.2.5 サインアップ時にログイン
+サインアップして手動でログインは手間なのでサインアップ成功時についでにログインするようにする  
+log_inメソッドを成功時に呼ぶだけでよい  
+
+これのテストはlogged_in?を使いたいがテストからヘルパーを呼ぶことはできない  
+sessionメソッドはテストからも呼ぶことができるのでtest_helper.rbにメソッドを定義する  
+test/test_helper.rb  
+```rb
+ENV['RAILS_ENV'] ||= 'test'
+.
+.
+.
+class ActiveSupport::TestCase
+  fixtures :all
+
+  # テストユーザーがログイン中の場合にtrueを返す
+  def is_logged_in?
+    !session[:user_id].nil?
+  end
+end
+```
+Sessionsヘルパーと区別するためにis_logged_in?という名前にしている  
+
+### 8.3 ログアウト
+```rb
+session.delete(:user_id)
+```
+セッションメソッドのdeleteを呼ぶだけでセッションからユーザー情報を削除することができる  
+
+また、ログアウト後にはルートページにリダイレクトする必要がある  

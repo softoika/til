@@ -153,3 +153,37 @@ class User < ApplicationRecord
 end
 ```
 このメソッドではBCryptのパスワードとして見たremember_digestがremember_tokenを暗号化したものかどうかを返している
+
+### 9.1.3 ユーザーを忘れる
+9.1.2ではlog_outメソッドを呼び出してもcurrent_userがnilにならないためにログアウト後のヘッダーに切り替わらない  
+クッキーやデータベースに保存されたユーザー情報をログアウト時に消すようにforgetメソッドを定義する
+
+app/models/user.rb  
+```rb
+class User < ApplicationRecord
+...
+  # ユーザーのログイン情報を破棄する
+   def forget
+     update_attribute(:remember_digest, nil)
+   end
+end
+```
+app/helpers/sessions_helper.rb
+```rb
+module SessionsHelper
+...
+  # 永続的セッションを破棄する
+  def forget(user)
+    user.forget
+    cookies.delete(:user_id)
+    cookies.delete(:remember_token)
+  end
+
+  # 現在のユーザーをログアウトする
+  def log_out
+    forget(current_user) ###
+    session.delete(:user_id)
+    @current_user = nil
+  end
+end
+```
